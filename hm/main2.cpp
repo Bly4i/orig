@@ -4,10 +4,17 @@
 #include <mutex>
 #include <chrono>
 #include <iomanip>
+#include <Windows.h> 
 
 using namespace std;
 
 mutex cout_mutex;
+
+void set_cursor_position(int x, int y) 
+{
+    COORD coord = { static_cast<SHORT>(x), static_cast<SHORT>(y) };
+    SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), coord);
+}
 
 void progress_bar(int thread_id, int total_steps, int sleep_time_ms)
 {
@@ -22,8 +29,12 @@ void progress_bar(int thread_id, int total_steps, int sleep_time_ms)
 
         {
             lock_guard<mutex> lock(cout_mutex);
-            cout << "\rThread " << setw(2) << thread_id << " | ID: " << setw(5) << this_thread::get_id()
-                << " | [" << setw(total_steps) << bar << "]" << flush;
+
+            set_cursor_position(0, thread_id - 1);
+
+            cout << "Thread " << setw(2) << thread_id << " | ID: " << setw(5) << this_thread::get_id()
+                << " | [" << setw(total_steps) << left << bar << "] "
+                << setw(3) << i * 100 / total_steps << "%" << flush;
         }
     }
 
@@ -32,15 +43,22 @@ void progress_bar(int thread_id, int total_steps, int sleep_time_ms)
 
     {
         lock_guard<mutex> lock(cout_mutex);
-        cout << "\rThread " << setw(2) << thread_id << " | ID: " << setw(5) << this_thread::get_id()
+
+        set_cursor_position(0, thread_id - 1);
+        
+        cout << "Thread " << setw(2) << thread_id << " | ID: " << setw(5) << this_thread::get_id()
             << " | Time: " << fixed << setprecision(2) << elapsed.count() << " seconds" << endl;
     }
 }
 
 int main()
 {
-    int num_threads = 4;       
-    int total_steps = 50;     
+    setlocale(LC_ALL, "ru");
+    SetConsoleCP(1251);
+    SetConsoleOutputCP(1251);
+
+    int num_threads = 4;
+    int total_steps = 50;
     int sleep_time_ms = 50;
 
     vector<thread> threads;
@@ -55,7 +73,7 @@ int main()
         t.join();
     }
 
-    cout << "Все потоки завершили работу." << endl;
+    cout << "\nВсе потоки завершили работу." << endl;
 
     return 0;
 }
