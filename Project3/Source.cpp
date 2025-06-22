@@ -11,42 +11,44 @@ using namespace std;
 
 
 
-future<size_t> findMinIndexAsync(const vector<int>& arr, size_t start) 
+void findMinIndexPromise(const vector<int>& arr, size_t start, promise<size_t>&& prom)
 {
-    return async(launch::async, [&arr, start]() 
+    size_t minIndex = start;
+    for (size_t i = start + 1; i < arr.size(); ++i)
+    {
+        if (arr[i] < arr[minIndex])
         {
-        size_t minIndex = start;
-        for (size_t i = start + 1; i < arr.size(); ++i) 
-        {
-            if (arr[i] < arr[minIndex]) 
-            {
-                minIndex = i;
-            }
+            minIndex = i;
         }
-        return minIndex;
-        });
+    }
+    prom.set_value(minIndex);
 }
 
-void selectionSortAsync(std::vector<int>& arr) 
+void selectionSortAsync(vector<int>& arr)
 {
-    for (size_t i = 0; i < arr.size() - 1; ++i) 
+    for (size_t i = 0; i < arr.size() - 1; ++i)
     {
-        future<size_t> future = findMinIndexAsync(arr, i);
+        promise<size_t> prom;
+        future<size_t> fut = prom.get_future();
 
-        size_t minIndex = future.get();
+        thread t(findMinIndexPromise, cref(arr), i, move(prom));
 
-        if (minIndex != i) 
+        size_t minIndex = fut.get();
+
+        t.join();
+
+        if (minIndex != i)
         {
             swap(arr[i], arr[minIndex]);
         }
     }
 }
 
-int main() 
+int main()
 {
     vector<int> data = { 5, 2, 8, 1, 9, 4, 7, 3, 6 };
     cout << "Original array: ";
-    for (int val : data) 
+    for (int val : data)
     {
         cout << val << " ";
     }
@@ -54,8 +56,8 @@ int main()
 
     selectionSortAsync(data);
 
-   cout << "Sorted array: ";
-    for (int val : data) 
+    cout << "Sorted array: ";
+    for (int val : data)
     {
         cout << val << " ";
     }
